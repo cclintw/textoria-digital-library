@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ page_title }}</title>
+  <meta name="description" content="{{ description }}">
+  <link rel="stylesheet" href="{{ asset_prefix }}css/style.css">
+</head>
+<body class="{{ body_class }}">
+{% include "partials/header.html" %}
+{% block body %}{% endblock %}
+{% include "partials/footer.html" %}
+<script src="{{ asset_prefix }}js/reader.js"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block body %}
+<main class="view home">
+  <section class="home-hero" aria-labelledby="homeTitle">
+    <div class="home-hero-copy">
+      <p class="home-kicker">Textoria Digital Library</p>
+      <h2 id="homeTitle">{{ collection.title }}</h2>
+      <p class="home-lead">將文本整理為可瀏覽、可全文檢索、可重建的數位典藏資料庫。</p>
+      <div class="home-actions">
+        <a class="home-btn home-btn-primary" href="{{ routes.read }}">瀏覽文本</a>
+        <a class="home-btn home-btn-outline" href="{{ routes.search }}">全文檢索</a>
+      </div>
+    </div>
+  </section>
+  <section class="home-metrics" aria-label="資料統計">
+    <div><strong>{{ counts.documents }}</strong><span>Documents</span></div>
+    <div><strong>{{ counts.divisions }}</strong><span>Divisions</span></div>
+    <div><strong>{{ counts.paragraphs }}</strong><span>Paragraphs</span></div>
+    <div><strong>{{ counts.sentences }}</strong><span>Sentences</span></div>
+  </section>
+</main>
+{% endblock %}

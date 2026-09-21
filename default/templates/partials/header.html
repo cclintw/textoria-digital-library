@@ -1,0 +1,11 @@
+<header>
+  <button id="toggleReaderLeft" class="reader-toggle" title="展開/收合章節" aria-label="展開/收合章節"></button>
+  <h1 class="brand"><a href="{{ routes.home }}">{{ brand_html | safe }}</a></h1>
+  <nav aria-label="主選單">
+    <a href="{{ routes.home }}" class="{{ 'active' if active == 'home' else '' }}">首頁</a>
+    <a href="{{ routes.read }}" class="{{ 'active' if active == 'read' else '' }}">瀏覽</a>
+    <a href="{{ routes.search }}" class="{{ 'active' if active == 'search' else '' }}">查詢</a>
+  </nav>
+  <div class="reader-tags" aria-label="瀏覽標記圖例"></div>
+  <button id="toggleReaderRight" class="reader-toggle" title="保留給未來標註資訊" aria-label="保留給未來標註資訊"></button>
+</header>

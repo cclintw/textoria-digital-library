@@ -1,0 +1,13 @@
+{
+  "name": "default",
+  "version": "0.1.0",
+  "description": "Default Textoria static digital library theme.",
+  "templates": {
+    "base": "templates/base.html",
+    "index": "templates/index.html",
+    "read": "templates/read.html",
+    "division": "templates/division.html",
+    "search": "templates/search.html"
+  },
+  "static": "static"
+}
