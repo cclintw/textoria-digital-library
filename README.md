@@ -32,10 +32,8 @@ Do not wrap these files in another `textoria-digital-library/` folder when publi
 Recommended. Run this in the target project root:
 
 ```bash
-mkdir -p .agents/skills/textoria-digital-library && curl -L https://github.com/<your-account>/textoria-digital-library/archive/refs/heads/main.tar.gz | tar -xz --strip-components=1 -C .agents/skills/textoria-digital-library
+mkdir -p .agents/skills/textoria-digital-library && curl -L https://github.com/cclintw/textoria-digital-library/archive/refs/heads/main.tar.gz | tar -xz --strip-components=1 -C .agents/skills/textoria-digital-library
 ```
-
-Replace `<your-account>` with the GitHub account or organization that owns the repo.
 
 This installs the skill only for the current project:
 
@@ -51,7 +49,7 @@ your-project/
 Codex's built-in skill installer installs into the user-level Codex skills directory:
 
 ```text
-install skill from https://github.com/<your-account>/textoria-digital-library
+install skill from https://github.com/cclintw/textoria-digital-library
 ```
 
 Use global install only if you want Textoria available in every project. Project-local install is safer for testing and for project-specific workflows.
