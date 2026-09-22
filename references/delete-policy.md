@@ -39,31 +39,7 @@ textoria/collections/<collection_slug>/
 
 delete that whole collection folder after confirmation, unless it contains the only known copy of original source files. Then update `textoria/registry.json`.
 
-For a simple single-collection archive directly under:
-
-```text
-textoria/
-```
-
-do not delete the whole `textoria/` directory. Delete only generated collection files and folders:
-
-```text
-textoria/manifest.json
-textoria/config/
-textoria/raw/
-textoria/prepared/
-textoria/clean/
-textoria/intermediate/
-textoria/csv/
-textoria/json/
-textoria/sqlite/
-textoria/search/
-textoria/epub/
-textoria/site/
-textoria/logs/
-```
-
-Keep:
+The `textoria/` root is project-level space. Never treat it as a collection archive root. Keep:
 
 ```text
 textoria/registry.json
@@ -77,7 +53,7 @@ Then remove the deleted collection entry from `textoria/registry.json`.
 
 Before deletion, show:
 
-- collection title;
+- collection name;
 - collection path;
 - source files that will be kept;
 - generated folders/files that will be deleted;
@@ -119,8 +95,6 @@ function execute_confirmed_delete_collection(deletion_plan) {
 
     if deletion_plan.collection_path matches "textoria/collections/<slug>" {
         delete directory deletion_plan.collection_path
-    } else if deletion_plan.collection_path == "textoria" {
-        delete only generated simple-collection paths
     } else {
         stop("collection path does not match Textoria safe-delete rules")
     }

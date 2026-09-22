@@ -9,7 +9,7 @@ import sqlite3
 import sys
 
 
-REQUIRED_PACKAGES = ["charset_normalizer", "bs4", "jinja2", "markdown_it"]
+REQUIRED_PACKAGES = ["charset_normalizer", "bs4", "jinja2", "markdown_it", "pypinyin"]
 
 
 def check_runtime() -> dict:

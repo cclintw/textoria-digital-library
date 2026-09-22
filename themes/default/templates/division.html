@@ -1,9 +1,8 @@
 {% extends "base.html" %}
 {% block body %}
-<main class="view layout reader-left-collapsed">
+<main class="view layout reader-left-collapsed reader-entering">
   <aside class="side"><h3>章節</h3>{{ toc_html | safe }}</aside>
-  <article class="content reader">
-    <h2>{{ current_division.title }}</h2>
+  <article id="readerContent" class="content reader reader-slide-ready">
     {{ paragraph_html | safe }}
     {{ chapter_nav_html | safe }}
   </article>

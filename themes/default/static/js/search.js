@@ -21,13 +21,12 @@ function formatSearchTerms(q) {
   return `<span class="search-term">${esc(q)}</span>`;
 }
 
-function updateSearchAssist(q) {
-  document.querySelectorAll('.search-assist').forEach(el => el.classList.toggle('is-hidden', Boolean(q)));
+function resultTitle(row) {
+  return row.division_title || String(row.division_path || '').replace(/^\/+/, '');
 }
 
 function runSearch() {
   const q = document.getElementById('q').value.trim();
-  updateSearchAssist(q);
   if (!q) {
     document.getElementById('activeSearchTerms').textContent = '';
     document.getElementById('results').innerHTML = '';
@@ -47,7 +46,7 @@ function searchPager(page, totalPages, totalRows, start, count) {
 
 function renderSearchResults() {
   const {q, rows, page, pageSize} = searchState;
-  document.getElementById('activeSearchTerms').innerHTML = `<span class="term-list">檢索模式：實體擴展　檢索字串：${formatSearchTerms(q)}</span>`;
+  document.getElementById('activeSearchTerms').innerHTML = `<span class="term-list">檢索字串：${formatSearchTerms(q)}</span>`;
   const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
   const start = (page - 1) * pageSize;
   const pageRows = rows.slice(start, start + pageSize);
@@ -56,7 +55,7 @@ function renderSearchResults() {
   document.getElementById('results').innerHTML = head + pager + pageRows.map(r => {
     const shortText = preview(r.text, 100);
     const canToggle = chars(r.text).length > 100;
-    return `<div class="result"><a class="result-title" href="${r.href}">${esc(r.division_path)} 第 #${esc(r.paragraph_index || '')} 段</a><div class="snippet" data-full-text="${esc(r.text)}" data-short-text="${esc(shortText)}" data-query="${esc(q)}" data-expanded="false">${highlightText(shortText, q)}${canToggle ? '...<button type="button" class="snippet-toggle">顯示全部</button>' : ''}</div></div>`;
+    return `<div class="result"><a class="result-title" href="${r.href}">${esc(resultTitle(r))} 第 ${esc(r.paragraph_index || '')} 段</a><div class="snippet" data-full-text="${esc(r.text)}" data-short-text="${esc(shortText)}" data-query="${esc(q)}" data-expanded="false">${highlightText(shortText, q)}${canToggle ? '...<button type="button" class="snippet-toggle">顯示全部</button>' : ''}</div></div>`;
   }).join('') + pager;
 }
 
@@ -70,11 +69,6 @@ function setAllSearchSnippets(expanded) {
 }
 
 document.getElementById('q').addEventListener('input', runSearch);
-document.querySelectorAll('[data-search-example]').forEach(btn => btn.addEventListener('click', () => {
-  document.getElementById('q').value = btn.dataset.searchExample;
-  runSearch();
-}));
-
 document.addEventListener('click', e => {
   const pageButton = e.target.closest('[data-search-page]');
   if (pageButton) {

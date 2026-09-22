@@ -9,7 +9,22 @@ from pathlib import Path
 from textoria_common import BuildPaths, now_iso, write_json, write_stage_report
 
 
-def heading_level(line: str) -> tuple[int, str] | None:
+CHINESE_NUMERAL_CHARS = "一二三四五六七八九十百千〇零○兩"
+CANDIDATE_HEADING_RE = re.compile(
+    rf"^(第[{CHINESE_NUMERAL_CHARS}\d]+[卷回章節])(?:[\s　]+.{{2,}}|(?!中既將)\S.{{1,}})\s*$"
+)
+CHAPTER_TITLE_RE = re.compile(rf"^(第[{CHINESE_NUMERAL_CHARS}\d]+[卷回章節])[\s　]*(.+?)\s*$")
+
+
+def normalize_candidate_heading_title(text: str) -> str:
+    match = CHAPTER_TITLE_RE.match(text.strip())
+    if not match:
+        return text.strip()
+    marker, title = match.groups()
+    return f"{marker}　{title.strip()}"
+
+
+def heading_level(line: str, *, confirm_candidate_headings: bool = False) -> tuple[int, str] | None:
     match = re.match(r"^(#{1,6})\s+(.+?)\s*$", line)
     if match:
         return len(match.group(1)), match.group(2).strip()
@@ -22,7 +37,25 @@ def heading_level(line: str) -> tuple[int, str] | None:
         plain = re.match(pattern, line.strip())
         if plain:
             return 2, plain.group(1).strip()
+
+    if confirm_candidate_headings:
+        candidate = CANDIDATE_HEADING_RE.match(line.strip())
+        if candidate:
+            return 2, normalize_candidate_heading_title(line)
     return None
+
+
+def candidate_heading_samples(cleaned: str, limit: int = 5) -> tuple[int, list[str]]:
+    samples: list[str] = []
+    count = 0
+    for line in cleaned.splitlines():
+        text = line.strip()
+        if not CANDIDATE_HEADING_RE.match(text):
+            continue
+        count += 1
+        if len(samples) < limit:
+            samples.append(normalize_candidate_heading_title(text))
+    return count, samples
 
 
 def split_sentences(text: str) -> list[str]:
@@ -44,11 +77,12 @@ def infer_division_type(title: str) -> str:
     return "heading"
 
 
-def evaluate_structure_confidence(cleaned: str, divisions: list[dict], source_ext: str) -> dict:
+def evaluate_structure_confidence(cleaned: str, divisions: list[dict], source_ext: str, *, confirmed_candidate_headings: bool = False) -> dict:
     md_heading_count = len(re.findall(r"^#{1,6}\s+", cleaned, flags=re.M))
     plain_heading_count = len(
         re.findall(r"^(卷[上中下\d一二三四五六七八九十百]+|第[一二三四五六七八九十百\d]+[卷回章節])\s*$", cleaned, flags=re.M)
     )
+    candidate_heading_count, candidate_samples = candidate_heading_samples(cleaned)
     paragraph_count = len([block for block in re.split(r"\n\s*\n", cleaned) if block.strip()])
 
     evidence = []
@@ -56,24 +90,45 @@ def evaluate_structure_confidence(cleaned: str, divisions: list[dict], source_ex
         evidence.append(f"found {md_heading_count} Markdown or HTML-derived heading lines")
     if plain_heading_count:
         evidence.append(f"found {plain_heading_count} repeated plain-text heading markers")
+    if candidate_heading_count:
+        if confirmed_candidate_headings:
+            evidence.append(f"confirmed {candidate_heading_count} candidate chapter-heading lines")
+        else:
+            evidence.append(f"found {candidate_heading_count} candidate chapter-heading lines that need user confirmation")
     evidence.append(f"found {paragraph_count} paragraph-like blocks")
 
     if md_heading_count:
         confidence = "high"
-    elif plain_heading_count >= 2:
+    elif plain_heading_count >= 2 or confirmed_candidate_headings:
         confidence = "medium"
     elif divisions and paragraph_count >= 2 and source_ext in {"html", "htm", "md"}:
         confidence = "medium"
     else:
         confidence = "low"
 
-    return {"confidence": confidence, "evidence": evidence}
+    return {
+        "confidence": confidence,
+        "evidence": evidence,
+        "needs_user_confirmation": confidence == "low",
+        "candidate_heading_count": candidate_heading_count,
+        "candidate_heading_samples": candidate_samples,
+    }
 
 
-def build_structure(cleaned: str, source_file: str, title_hint: str) -> dict[str, list[dict] | dict]:
+def build_structure(
+    cleaned: str,
+    source_file: str,
+    title_hint: str,
+    collection_name: str | None = None,
+    *,
+    confirm_candidate_headings: bool = False,
+) -> dict[str, list[dict] | dict]:
+    collection_title = collection_name or title_hint
     collection = {
         "collection_id": "col-0001",
-        "title": f"{title_hint}全文檢索",
+        "name": collection_title,
+        "slug": "col-0001",
+        "title": collection_title,
         "subtitle": "",
         "description": "",
         "collection_type": "digital_archive",
@@ -219,7 +274,7 @@ def build_structure(cleaned: str, source_file: str, title_hint: str) -> dict[str
                 )
 
     for line in cleaned.splitlines():
-        heading = heading_level(line)
+        heading = heading_level(line, confirm_candidate_headings=confirm_candidate_headings)
         if heading:
             flush_paragraphs()
             md_level, heading_title = heading
@@ -260,7 +315,12 @@ def build_structure(cleaned: str, source_file: str, title_hint: str) -> dict[str
         }
     ]
     metadata: list[dict] = []
-    structure_report = evaluate_structure_confidence(cleaned, divisions, Path(source_file).suffix.lower().lstrip("."))
+    structure_report = evaluate_structure_confidence(
+        cleaned,
+        divisions,
+        Path(source_file).suffix.lower().lstrip("."),
+        confirmed_candidate_headings=confirm_candidate_headings,
+    )
     return {
         "collections": [collection],
         "documents": documents,

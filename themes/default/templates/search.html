@@ -4,18 +4,7 @@
   <article class="content">
     <h2>全文檢索</h2>
     <div class="search-row">
-      <input id="q" placeholder="搜尋原文或詞頻">
-      <div class="search-mode" aria-label="檢索模式">
-        <button type="button" data-search-mode="exact">精確字串</button>
-        <button type="button" data-search-mode="entity" class="active">實體擴展</button>
-      </div>
-    </div>
-    <div class="search-examples search-assist" aria-label="熱門查詢">
-      <span class="search-examples-label">熱門查詢字串：</span>
-      {{ search_examples_html | safe }}
-    </div>
-    <div class="search-help search-assist">
-      <p>精確字串只查原文中完全出現的字串；實體擴展介面先保留，等候選詞、權威表與別名表完成後啟用。</p>
+      <input id="q" placeholder="搜尋原文">
     </div>
     <p id="activeSearchTerms" class="active-terms"></p>
     <div id="results"></div>

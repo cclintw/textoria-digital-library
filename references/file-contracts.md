@@ -28,11 +28,13 @@ textoria/
         `-- ...collection archive layout below...
 ```
 
-For a simple project with only one collection, the collection archive may live directly at `textoria/` for convenience and backward compatibility. If the project contains more than one collection, each independent collection should live under:
+Every collection archive, including the first or only collection in a project, must live under:
 
 ```text
 textoria/collections/<collection_slug>/
 ```
+
+The `textoria/` root is project-level space only. It may contain `registry.json`, shared theme files, global settings, collection indexes, experiments, and extensions. It must not contain a single collection's `manifest.json`, `raw/`, `prepared/`, `clean/`, `intermediate/`, `csv/`, `json/`, `sqlite/`, `search/`, `epub/`, `site/`, or `logs/` outputs.
 
 Each collection archive uses this layout:
 
@@ -85,8 +87,8 @@ Each collection archive uses this layout:
 |-- site/assets/css/style.css
 |-- site/assets/js/reader.js
 |-- site/assets/js/search.js
-|-- site/read/<division_id>.html
-|-- site/md/<division_id>.md
+|-- site/read/<top_level_division_id>.html
+|-- site/md/<top_level_division_id>.md
 |-- site/data/collection.json
 |-- site/data/documents.json
 |-- site/data/divisions.json
@@ -105,6 +107,9 @@ Each collection archive uses this layout:
   "collections": [
     {
       "collection_id": "bihai-jiyou",
+      "archive_id": "bihai-jiyou",
+      "slug": "bihai-jiyou",
+      "name": "裨海紀遊",
       "title": "裨海紀遊",
       "path": "textoria/collections/bihai-jiyou",
       "source_files": ["sources/bihai/裨海紀遊.html"],
@@ -128,7 +133,9 @@ Each collection archive uses this layout:
 
 IDs must be stable within one build and should be deterministic from source order when possible.
 
-- `collection_id`: `col-0001`
+- `collection_id`: system-generated collection slug, such as `bihai-jiyou`
+- `slug`: same stable system-generated slug as `collection_id`
+- `name`: user-confirmed display name, such as `裨海紀遊`
 - `document_id`: `doc-0001`
 - `division_id`: `div-000001`
 - `paragraph_id`: `p-0000001`
@@ -144,6 +151,8 @@ IDs must be stable within one build and should be deterministic from source orde
 Required columns:
 
 - `collection_id`
+- `name`
+- `slug`
 - `title`
 - `subtitle`
 - `description`
@@ -452,9 +461,9 @@ Static site HTML, CSS, and JavaScript must be generated from a theme/template sy
 
 - `index.html`: landing/catalog view for the collection.
 - `read.html`: browse entry page grouped by `documents`; each document is treated as a separate book-like unit.
-- `read/<division_id>.html`: one reading page per division. Large corpora must not be rendered into one giant reader page.
-- `md/<division_id>.md`: one Markdown export per division.
-- `search.html`: full-text search interface; search results should link to `read/<division_id>.html#<paragraph_id>`.
+- `read/<top_level_division_id>.html`: one reading page per top-level division. Child divisions render inside that page as anchored sections. Large corpora must not be rendered into one giant reader page.
+- `md/<top_level_division_id>.md`: one Markdown export per top-level division, including its child divisions.
+- `search.html`: full-text search interface; search results should link to `read/<top_level_division_id>.html#<paragraph_id>`.
 
 The primary navigation must use real HTML pages for SEO:
 

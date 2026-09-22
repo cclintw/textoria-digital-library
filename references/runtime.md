@@ -20,12 +20,12 @@ Ask only one user-facing question at a time. Runtime approval must not be combin
   - `beautifulsoup4`
   - `jinja2`
   - `markdown-it-py`
+  - `pypinyin`
 
 Optional packages are not installed unless the user enables a feature that needs them:
 
 - `jieba`
 - `opencc`
-- `pypinyin`
 - `pytest`
 
 ## Runtime Check
@@ -75,7 +75,8 @@ function ensure_textoria_runtime(config) {
         "charset-normalizer",
         "beautifulsoup4",
         "jinja2",
-        "markdown-it-py"
+        "markdown-it-py",
+        "pypinyin"
     ]
 
     missing = call check_packages(venv.python, required_packages)
@@ -131,7 +132,7 @@ Do not explain package purposes in the permission message unless the user asks w
 Prefer project-local Textoria venv package installation:
 
 ```text
-.textoria/venv/bin/python -m pip install charset-normalizer beautifulsoup4 jinja2 markdown-it-py
+.textoria/venv/bin/python -m pip install charset-normalizer beautifulsoup4 jinja2 markdown-it-py pypinyin
 ```
 
 System Python installation is platform-specific and should be conservative:

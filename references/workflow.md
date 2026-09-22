@@ -51,7 +51,7 @@ HTML / Static Site / EPUB
 
 Users may ask for any supported output before they know the required workflow order. Textoria must resolve the requested task, then run only the missing or stale prerequisite stages in this dependency graph.
 
-Before resolving input files, resolve the target collection archive. In v1, a project may contain one or more Textoria collections. If exactly one collection exists, ambiguous Textoria requests continue that collection by default. If more than one collection exists and the request does not identify the target, ask which collection to use. If the user explicitly asks for a new collection, ask where its source folder/files are; if no source folder exists, create/use `textoria/collections/<collection_slug>/` as the new collection output root.
+Before resolving input files, resolve the target collection archive. In v1, a project may contain one or more Textoria collections. All collection archives must live under `textoria/collections/<collection_slug>/`, including the first and only collection in a project. If creating a new collection, ask the user to confirm the human-readable collection `name` first, defaulting to the source filename stem; then generate the system `slug` automatically. If exactly one collection exists, ambiguous Textoria requests continue that collection by default. If more than one collection exists and the request does not identify the target, ask which collection to use. If the user explicitly asks for a new collection, ask where its source folder/files are; if no source folder exists, create/use `textoria/collections/<collection_slug>/` as the new collection output root.
 
 ```text
 inspect_input
@@ -88,7 +88,7 @@ Rules:
 Each deterministic stage should write a stage report under:
 
 ```text
-textoria/logs/stages/<stage_name>.json
+textoria/collections/<collection_slug>/logs/stages/<stage_name>.json
 ```
 
 A stage is fresh when all of these are true:
@@ -153,7 +153,7 @@ function decide_structure_policy(structure_preview, requested_task, config) {
         return "ask_review"
     }
 
-    return "needs_manual_structure_marking"
+    return "needs_structure_confirmation"
 }
 ```
 
@@ -166,14 +166,32 @@ Confidence rules:
 When confidence is `high` or `medium`, write:
 
 ```text
-textoria/intermediate/structure_preview.json
-textoria/intermediate/structure_preview.md
-textoria/intermediate/division_review.md
+textoria/collections/<collection_slug>/intermediate/structure_preview.json
+textoria/collections/<collection_slug>/intermediate/structure_preview.md
+textoria/collections/<collection_slug>/intermediate/division_review.md
 ```
 
 Then continue the requested final-output workflow. The final response must list the inferred divisions or a useful sample, state the confidence level and evidence, and tell the user they can edit the review files and run `restructure_text` or rebuild the requested output.
 
-When confidence is `low`, stop and ask the user to manually mark the cleaned or merged text with Markdown headings and paragraph breaks:
+When confidence is `low`, stop before CSV, JSON, SQLite, FTS, site, EPUB, manifest, and registry outputs. Write the structure preview/review files first, then ask exactly one confirmation question.
+
+If Textoria can see a plausible repeated candidate pattern that has not been confirmed, summarize it and ask the user to confirm:
+
+```text
+我目前無法可靠判斷這份文本的章節結構，但看到可能的章節標題：「第一回　...」、「第二回　...」。請確認是否以這類標題作為第一層 division。
+```
+
+After the user confirms the proposed structure rule, rerun the build with that rule enabled; for the bundled script this means passing `--confirm-inferred-structure`.
+
+When a confirmed candidate heading combines a Chinese volume/chapter marker and title on one line, normalize the division title with one ideographic space after the marker. For example, `第十五回王鳳姐弄權鐵檻寺秦鯨卿得趣饅頭庵` becomes `第十五回　王鳳姐弄權鐵檻寺秦鯨卿得趣饅頭庵`.
+
+If Textoria cannot see a plausible candidate pattern, ask the user for a rule or manual markings:
+
+```text
+我目前無法可靠判斷這份文本的章節結構。你可以提供章節切分規則嗎？或讓我先自行判斷並提出建議。
+```
+
+Manual markings use Markdown headings and paragraph breaks:
 
 ```markdown
 # Document title
@@ -355,7 +373,29 @@ function build_epub(json_files, workspace, config) {
 
 ```text
 function summarize_outputs_with_structure_review(output, structure, workspace, config) {
+    if a static site was generated:
+        start or reuse a local static HTTP server for site/
+        report the clickable URL, such as http://localhost:<port>/
     report generated output paths
+    report all major generated artifacts with clickable file links:
+        textoria/registry.json
+        manifest.json
+        config/textoria.yml
+        raw/source_manifest.json
+        prepared/<source>.utf8.<ext>
+        clean/cleaned_text.md
+        csv/*.csv
+        json/*.json
+        sqlite/library.sqlite
+        search/search_index.json
+        search/fts_config.json
+        epub/<collection_slug>.epub
+        epub/epub_manifest.json
+        site/index.html
+        site/read.html
+        site/search.html
+        site/data/*.json
+        logs/*.json
     report important intermediate files:
         clean/cleaned_text.md
         intermediate/structure_preview.md
@@ -368,6 +408,8 @@ function summarize_outputs_with_structure_review(output, structure, workspace, c
     list all inferred divisions when the list is short
     if divisions are many, list the first config.summary.max_divisions_to_show and point to division_review.md
     explain that the divisions were inferred automatically and can be edited/rebuilt
+    add operation note:
+        我已經建立一個網站，網址為 [http://localhost:<port>/](http://localhost:<port>/)。你可以用瀏覽器打開此網站；若電腦重新開機或網站停用時，可以下指令要求 Codex 重新啟用網站。
     return final_summary
 }
 ```
@@ -392,10 +434,11 @@ function build_static_site(sqlite, json_files, search, workspace, config) {
         index.html
         read.html
         search.html
-    generate one reading HTML page per division:
-        read/<division_id>.html
-    generate one Markdown file per division:
-        md/<division_id>.md
+    generate one reading HTML page per top-level division:
+        read/<top_level_division_id>.html
+    render child divisions as anchored sections inside their top-level division page
+    generate one Markdown file per top-level division:
+        md/<top_level_division_id>.md
     copy required JSON to site/data/
     copy CSS and JS assets to site/assets/
     return site_path

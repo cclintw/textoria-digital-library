@@ -70,6 +70,7 @@ Required Python packages:
 - `beautifulsoup4`
 - `jinja2`
 - `markdown-it-py`
+- `pypinyin`
 
 The skill asks before creating the virtual environment or installing dependencies.
 
@@ -78,14 +79,16 @@ The skill asks before creating the virtual environment or installing dependencie
 Textoria writes project outputs under:
 
 ```text
-textoria/
+textoria/collections/<collection_slug>/
 ```
 
-A project may contain one or more Textoria collection archives. For multiple collections, outputs use:
+Every collection archive uses that path, including the first and only collection in a project. The `textoria/` root is reserved for project-level files such as `registry.json`, shared theme files, global settings, and collection indexes.
 
 ```text
 textoria/collections/<collection_slug>/
 ```
+
+When creating a new collection, Textoria asks the user to confirm the human-readable collection `name`, defaulting to the source filename stem. Textoria then generates a WordPress-post-name-style `slug` from that name. Chinese names are converted to lowercase Hanyu Pinyin without tone marks. Duplicate slugs follow WordPress suffixing: original, then `-2`, `-3`, and so on. The generated site and EPUB display the `name`; registry ids, archive paths, and EPUB filenames use the `slug`.
 
 Each collection contains its own cleaned text, intermediates, CSV/JSON, SQLite database, static site, EPUB, and logs.
 

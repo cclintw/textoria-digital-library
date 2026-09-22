@@ -3,11 +3,20 @@
 
 from __future__ import annotations
 
+import argparse
+import json
 import sqlite3
 import zipfile
 from pathlib import Path
 
-from textoria_common import BuildPaths, write_json, write_stage_report
+from textoria_common import BuildPaths, ensure_dirs, write_json, write_stage_report
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Validate a Textoria collection archive root.")
+    parser.add_argument("collection_root")
+    parser.add_argument("--epub", action="store_true", help="Require and validate EPUB output")
+    return parser.parse_args()
 
 
 def validate_outputs(paths: BuildPaths, db_path: Path, include_epub: bool = False) -> dict:
@@ -43,13 +52,22 @@ def validate_outputs(paths: BuildPaths, db_path: Path, include_epub: bool = Fals
             con.close()
 
     epub_files = list(paths.epub.glob("*.epub"))
+    top_level_count = 0
+    divisions_json = paths.json / "divisions.json"
+    if divisions_json.exists():
+        try:
+            divisions = json.loads(divisions_json.read_text(encoding="utf-8")).get("divisions", [])
+            top_level_count = len([div for div in divisions if int(div.get("level") or 0) == 1 or not div.get("parent_division_id")])
+        except (json.JSONDecodeError, ValueError, TypeError):
+            errors.append(f"invalid divisions JSON: {divisions_json}")
     division_count = counts.get("divisions", 0)
     division_pages = list((paths.site / "read").glob("*.html"))
     markdown_pages = list((paths.site / "md").glob("*.md"))
-    if division_count and len(division_pages) < division_count:
-        errors.append(f"missing division HTML pages: expected {division_count}, found {len(division_pages)}")
-    if division_count and len(markdown_pages) < division_count:
-        errors.append(f"missing division Markdown pages: expected {division_count}, found {len(markdown_pages)}")
+    expected_pages = top_level_count or division_count
+    if expected_pages and len(division_pages) < expected_pages:
+        errors.append(f"missing top-level division HTML pages: expected {expected_pages}, found {len(division_pages)}")
+    if expected_pages and len(markdown_pages) < expected_pages:
+        errors.append(f"missing top-level division Markdown pages: expected {expected_pages}, found {len(markdown_pages)}")
 
     if include_epub:
         if not epub_files:
@@ -73,6 +91,7 @@ def validate_outputs(paths: BuildPaths, db_path: Path, include_epub: bool = Fals
         "sqlite": str(db_path),
         "site": str(paths.site),
         "division_pages": len(division_pages),
+        "top_level_division_pages_expected": top_level_count,
         "markdown_pages": len(markdown_pages),
         "epub": [str(path) for path in epub_files],
         "errors": errors,
@@ -81,3 +100,16 @@ def validate_outputs(paths: BuildPaths, db_path: Path, include_epub: bool = Fals
     write_json(paths.logs / "errors.json", errors)
     write_stage_report(paths, "validate_output", result)
     return result
+
+
+def main() -> int:
+    args = parse_args()
+    root = Path(args.collection_root).resolve()
+    paths = ensure_dirs(root)
+    result = validate_outputs(paths, paths.sqlite / "library.sqlite", include_epub=args.epub)
+    print(json.dumps(result, ensure_ascii=False, indent=2))
+    return 0 if result["ok"] else 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

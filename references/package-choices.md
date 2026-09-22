@@ -12,6 +12,7 @@ Use conservative dependencies. The first-version archive must be easy to run loc
   - `beautifulsoup4`
   - `jinja2`
   - `markdown-it-py`
+  - `pypinyin`
 
 Run the checks in [runtime.md](runtime.md) before executing local scripts. If a required component is missing, ask the user for approval before installation. If all components are present, proceed without asking.
 
@@ -40,6 +41,7 @@ These are required for Textoria v1:
 - `beautifulsoup4`: robust HTML extraction.
 - `jinja2`: static HTML templates.
 - `markdown-it-py`: Markdown parsing when heading extraction is not enough.
+- `pypinyin`: generate English pinyin slugs from Chinese collection names.
 
 Install them only inside the current project's `.textoria/venv/`; do not install into system Python.
 
@@ -49,7 +51,6 @@ Do not require these in the first-version core workflow:
 
 - `jieba`: optional Chinese tokenization.
 - `opencc`: optional simplified/traditional conversion.
-- `pypinyin`: optional sort/search assistance.
 - `pytest`: optional tests for scripts and workflow validation.
 
 ## Frontend Policy

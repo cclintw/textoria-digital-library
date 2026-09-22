@@ -159,7 +159,7 @@ Default profile for Chinese historical text preparation:
   - `︽` -> `《`
   - `︾` -> `》`
 - Convert half-width punctuation to full-width punctuation in prose lines.
-- Convert half-width double quotes to alternating `「` and `」`.
+- Convert half-width double quotes and curly double quotes (`“”`) to `「` and `」`.
 - Preserve Markdown syntax on heading lines, table rows, footnote definitions, and image links.
 - Remove unsafe or unwanted markup: `script`, `style`, `head`, `svg`, comments, XML declarations, and doctype declarations.
 - Collapse excessive blank lines.

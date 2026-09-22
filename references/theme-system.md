@@ -66,9 +66,11 @@ The generated site must use real HTML files for SEO:
 site/index.html
 site/read.html
 site/search.html
-site/read/<division_id>.html
-site/md/<division_id>.md
+site/read/<top_level_division_id>.html
+site/md/<top_level_division_id>.md
 ```
+
+Reading pages are generated at the top-level division granularity. Child divisions render as anchored sections inside the parent top-level division page and should be reachable from the page's internal table of contents.
 
 The primary menu must link to:
 

@@ -81,6 +81,12 @@ def convert_punctuation_line(line: str) -> str:
         if char == '"':
             converted.append("「" if open_quote else "」")
             open_quote = not open_quote
+        elif char == "“":
+            converted.append("「")
+            open_quote = False
+        elif char == "”":
+            converted.append("」")
+            open_quote = True
         else:
             converted.append(HALFWIDTH_PUNCT.get(char, char))
     return "".join(converted)
@@ -112,6 +118,7 @@ def clean_cc_text(text: str) -> tuple[str, dict]:
             "replace_invalid_characters",
             "normalize_vertical_punctuation",
             "convert_halfwidth_punctuation_in_prose",
+            "convert_curly_double_quotes",
             "collapse_excess_blank_lines",
         ],
         "rules_skipped": [],

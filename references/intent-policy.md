@@ -26,7 +26,7 @@ If the user gives a clear task but does not specify a file, resolve inputs accor
 - For independent file tasks such as inspection, encoding conversion, and cleaning, ask whether to process one file, selected files, or all supported files.
 - For ordered corpus tasks such as structure, SQLite, FTS, EPUB, static site, or full archive, ask the user to confirm the target files and merge order. Do not ask whether each file is a document, division, paragraph, chapter, or section at this stage.
 
-If multiple files need to be merged, tell the user that Textoria will create `textoria/intermediate/merged_text.md` for review before structure extraction continues.
+If multiple files need to be merged, tell the user that Textoria will create `textoria/collections/<collection_slug>/intermediate/merged_text.md` for review before structure extraction continues.
 
 ## Clear Requests
 
@@ -123,4 +123,4 @@ If the user asks to modify `SKILL.md`, `scripts/`, `references/`, `themes/defaul
 你現在要求修改 Textoria skill 本身。這會改變此 skill 的原有設計、pipeline 行為、輸出格式或後續 rebuild 結果，也可能造成和原版 Textoria skill 不相容。如果只是一次性實驗，我建議輸出到 textoria/experiments/ 或建立 project config，不修改 skill 本體。請確認你是否仍要修改 skill 本身？
 ```
 
-If the user confirms, treat the local skill as a fork/custom copy. Record the reason and changed files in `FORK_NOTES.md` or `textoria/logs/skill-fork.json`.
+If the user confirms, treat the local skill as a fork/custom copy. Record the reason and changed files in `FORK_NOTES.md` or `.textoria/logs/skill-fork.json`.

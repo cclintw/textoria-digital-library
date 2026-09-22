@@ -17,9 +17,9 @@ def build_sqlite(db_path: Path, data: dict[str, list[dict]]) -> None:
         """
         PRAGMA foreign_keys = ON;
         CREATE TABLE collections (
-            collection_id TEXT PRIMARY KEY, title TEXT NOT NULL, subtitle TEXT,
-            description TEXT, collection_type TEXT, language TEXT, created_at TEXT,
-            updated_at TEXT, metadata_json TEXT
+            collection_id TEXT PRIMARY KEY, name TEXT NOT NULL, slug TEXT NOT NULL,
+            title TEXT NOT NULL, subtitle TEXT, description TEXT, collection_type TEXT,
+            language TEXT, created_at TEXT, updated_at TEXT, metadata_json TEXT
         );
         CREATE TABLE documents (
             document_id TEXT PRIMARY KEY, collection_id TEXT NOT NULL, title TEXT NOT NULL,

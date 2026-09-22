@@ -15,7 +15,7 @@ Do not create fixed `books`, `chapters`, or `sections` tables. Variable middle s
 Default path:
 
 ```text
-textoria/sqlite/library.sqlite
+textoria/collections/<collection_slug>/sqlite/library.sqlite
 ```
 
 Enable foreign keys during validation:
@@ -33,6 +33,8 @@ PRAGMA foreign_keys = ON;
 ```sql
 CREATE TABLE collections (
     collection_id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    slug TEXT NOT NULL,
     title TEXT NOT NULL,
     subtitle TEXT,
     description TEXT,

@@ -29,7 +29,7 @@ def xhtml_page(title: str, body: str) -> str:
 def build_epub(paths: BuildPaths, data: dict) -> dict:
     collection = data["collections"][0]
     title = collection["title"]
-    slug = slugify(title)
+    slug = slugify(collection.get("collection_id") or title)
     epub_path = paths.epub / f"{slug}.epub"
     identifier = f"urn:uuid:{uuid.uuid5(uuid.NAMESPACE_URL, title)}"
 

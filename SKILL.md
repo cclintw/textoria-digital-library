@@ -82,7 +82,7 @@ For ordered multi-file tasks, infer a proposed merge order only as a convenience
 After confirmation, write a fixed review file:
 
 ```text
-textoria/intermediate/merged_text.md
+textoria/collections/<collection_slug>/intermediate/merged_text.md
 ```
 
 Tell the user they may open and edit this file before structuring. If the detected structure looks wrong, ask them to mark levels with Markdown headings up to four levels:
@@ -94,7 +94,7 @@ Tell the user they may open and edit this file before structuring. If the detect
 #### Division level 3
 ```
 
-For final-output tasks such as SQLite, FTS, EPUB, static site, or `build_fulltext_archive`, do not stop for structure review when the structure confidence is high or medium. Continue to the requested output, then tell the user which divisions were inferred and which files can be edited before rebuilding. Stop for manual structure marking only when Textoria cannot infer usable divisions or paragraph boundaries. Read [references/input-resolution.md](references/input-resolution.md) before resolving multiple candidate files.
+For final-output tasks such as SQLite, FTS, EPUB, static site, or `build_fulltext_archive`, do not stop for structure review when the structure confidence is high or medium. Continue to the requested output, then tell the user which divisions were inferred and which files can be edited before rebuilding. Stop before downstream outputs when Textoria cannot infer usable divisions or paragraph boundaries. If Textoria sees candidate heading patterns but confidence remains low, state the proposed rule and ask the user to confirm before rebuilding. Read [references/input-resolution.md](references/input-resolution.md) before resolving multiple candidate files.
 
 ## Project Archive Policy
 
@@ -104,13 +104,26 @@ Textoria v1 supports one or more collection archives inside one project root. A 
 one project root = one or more Textoria collection archives
 ```
 
-For a simple project with only one collection, `textoria/` may be used as the collection archive root. For projects with multiple collections, use:
+Every collection archive must use:
 
 ```text
 textoria/collections/<collection_slug>/
 ```
 
-`textoria/registry.json` records all collection archives in the project.
+`textoria/registry.json` records all collection archives in the project. The `textoria/` root is reserved for project-level registry, shared theme files, global settings, collection indexes, experiments, and extensions; it must not contain a single collection's `manifest.json`, `csv/`, `json/`, `sqlite/`, `site/`, `search/`, `epub/`, or `logs/` outputs.
+
+Each collection has two identity fields:
+
+- `name`: the human-readable collection name, chosen or confirmed by the user and shown in the generated site and EPUB.
+- `slug`: the system-generated WordPress-post-name-style identifier used for `collection_id`, `archive_id`, the collection folder name, EPUB filename, and registry lookup.
+
+When creating a new collection archive, ask the user to confirm the collection `name` before writing outputs. Use the source filename stem as the default suggestion:
+
+```text
+要建立新的 Textoria 文獻集。文獻集名稱使用「<source_filename_stem>」嗎？或請輸入文獻集名稱。
+```
+
+After the user confirms the `name`, generate `slug` automatically from that name: normalize with Unicode NFKC, convert Chinese characters to lowercase Hanyu Pinyin without tone marks, lowercase Latin letters, convert spaces and underscores to hyphens, remove punctuation, and collapse repeated hyphens. If the slug already exists in `textoria/registry.json` for another collection, follow WordPress-style suffixing: the original slug has no suffix, the first duplicate becomes `-2`, then `-3`, and so on. Do not ask the user to type the slug unless resolving an unusual conflict manually.
 
 If no Textoria collection exists, treat the next Textoria build as first-time setup. If multiple supported files are found, ask whether to use all files, selected files, or a specific file; for ordered corpus tasks, confirm merge order.
 
@@ -171,6 +184,10 @@ function handle_user_request(user_request, files, config) {
             return ask_merge_order_confirmation(input_plan)
         }
 
+        if input_plan.status == "needs_structure_confirmation" {
+            return ask_structure_confirmation(input_plan)
+        }
+
         if input_plan.status == "needs_manual_structure_marking" {
             return ask_manual_structure_marking(input_plan)
         }
@@ -212,6 +229,10 @@ function build_fulltext_archive(input_plan, config) {
     cleaned_text = call clean_text(prepared_input.text_file, workspace, config)
     structure = call structure_text(cleaned_text, workspace, config)
 
+    if structure.confidence == "low" {
+        return ask_structure_confirmation_or_manual_rule(structure)
+    }
+
     csv_files = call export_csv(structure, workspace, config)
     json_files = call export_json(structure, workspace, config)
 
@@ -242,6 +263,10 @@ function build_epub_archive(input_plan, config) {
 
     cleaned_text = call clean_text(prepared_input.text_file, workspace, config)
     structure = call structure_text(cleaned_text, workspace, config)
+
+    if structure.confidence == "low" {
+        return ask_structure_confirmation_or_manual_rule(structure)
+    }
 
     csv_files = call export_csv(structure, workspace, config)
     json_files = call export_json(structure, workspace, config)
@@ -281,35 +306,40 @@ function run_until_valid(file, config) {
 
 Use the standard Textoria output layout unless the user explicitly provides another output directory.
 
-V1 may have one or more collection archives per project root. `textoria/registry.json` records them. A single simple collection may use `textoria/` directly; multiple collections should use `textoria/collections/<collection_slug>/`.
+V1 may have one or more collection archives per project root. `textoria/registry.json` records them. Every collection archive, including the first and only collection in a project, must live under `textoria/collections/<collection_slug>/`.
 
 ```text
 textoria/
-|-- manifest.json
+|-- registry.json
+|-- theme/
 |-- config/
-|   `-- textoria.yml
-|-- raw/
-|   |-- original/
-|   `-- source_manifest.json
-|-- prepared/
-|-- clean/
-|-- intermediate/
-|-- csv/
-|-- json/
-|-- sqlite/
-|-- search/
-|-- epub/
-|-- site/
-|   |-- index.html
-|   |-- read.html
-|   |-- search.html
-|   |-- assets/
-|   |-- read/
-|   |   `-- <division_id>.html
-|   |-- md/
-|   |   `-- <division_id>.md
-|   `-- data/
-`-- logs/
+`-- collections/
+    `-- <collection_slug>/
+        |-- manifest.json
+        |-- config/
+        |   `-- textoria.yml
+        |-- raw/
+        |   |-- original/
+        |   `-- source_manifest.json
+        |-- prepared/
+        |-- clean/
+        |-- intermediate/
+        |-- csv/
+        |-- json/
+        |-- sqlite/
+        |-- search/
+        |-- epub/
+        |-- site/
+        |   |-- index.html
+        |   |-- read.html
+        |   |-- search.html
+        |   |-- assets/
+        |   |-- read/
+        |   |   `-- <top_level_division_id>.html
+        |   |-- md/
+        |   |   `-- <top_level_division_id>.md
+        |   `-- data/
+        `-- logs/
 ```
 
 ## Non-Pipeline And Custom Work
@@ -317,7 +347,7 @@ textoria/
 Do not treat the Textoria task list as a refusal rule for ordinary Codex work. Use this routing:
 
 - General or unrelated questions: answer normally. Do not create, edit, or delete Textoria files.
-- Adjacent but unsupported Textoria requests: explain that the feature is not part of the v1 formal pipeline. If the user wants a one-off result, ask before writing and use `textoria/experiments/<task>/` or `textoria/extensions/<feature>/`. Do not modify canonical files under `textoria/csv/`, `textoria/json/`, `textoria/sqlite/`, `textoria/site/`, or `textoria/epub/`.
+- Adjacent but unsupported Textoria requests: explain that the feature is not part of the v1 formal pipeline. If the user wants a one-off result, ask before writing and use `textoria/experiments/<task>/` or `textoria/extensions/<feature>/`. Do not modify canonical files under `textoria/collections/<collection_slug>/csv/`, `textoria/collections/<collection_slug>/json/`, `textoria/collections/<collection_slug>/sqlite/`, `textoria/collections/<collection_slug>/site/`, or `textoria/collections/<collection_slug>/epub/`.
 - Custom rules that conflict with Textoria defaults: explain the conflict. For a project-specific persistent rule, write config under `textoria/config/`; for a one-off run, write outputs under `textoria/experiments/` or `textoria/custom/`. Do not change `SKILL.md`, `scripts/`, `references/`, or `themes/default/` unless the user explicitly asks to modify the skill itself.
 - Modified intermediate schemas: never silently change canonical CSV/JSON schemas. Store extra fields in `metadata_json`, the `metadata` table, or an extension file. If required canonical columns are missing, stop the formal rebuild and ask the user to repair or regenerate the canonical file.
 
@@ -327,7 +357,7 @@ When the user explicitly asks to modify this skill, its scripts, references, sch
 You are asking to modify the Textoria skill itself. This can change the original pipeline behavior, output formats, rebuild compatibility, and future upgrade path. If this is only a one-off experiment, I recommend using textoria/experiments/ or project config instead. Please confirm that you want to fork/customize this skill.
 ```
 
-If the user confirms, treat the project-local skill as a custom fork and record the change in `FORK_NOTES.md` or `textoria/logs/skill-fork.json`.
+If the user confirms, treat the project-local skill as a custom fork and record the change in `FORK_NOTES.md` or `.textoria/logs/skill-fork.json`.
 
 Read [references/runtime.md](references/runtime.md) before executing local scripts or installing dependencies. Read [references/text-cleaning.md](references/text-cleaning.md) before encoding conversion, extraction, or cleaning. Read [references/file-contracts.md](references/file-contracts.md) before creating or validating intermediate files. Read [references/schema.md](references/schema.md) before building SQLite or FTS. Read [references/workflow.md](references/workflow.md) before running a multi-step workflow. Read [references/theme-system.md](references/theme-system.md) before generating or modifying the static site theme. Read [references/package-choices.md](references/package-choices.md) before adding dependencies or scaffolding scripts.
 Read [references/delete-policy.md](references/delete-policy.md) before deleting, resetting, or cleaning a Textoria collection archive.
@@ -357,6 +387,6 @@ Do not automatically remove notes, bracketed text, page numbers, headers, footer
 
 ## Package Policy
 
-Use Python 3.10+ in the project-local Textoria virtual environment at `.textoria/venv/`. Required packages are `charset-normalizer`, `beautifulsoup4`, `jinja2`, and `markdown-it-py`. User project outputs go in `textoria/`; project-local internal runtime state goes in `.textoria/`. If Python, SQLite FTS5, the venv, or required packages are missing, ask for user approval before installing or modifying the project environment. If they already exist, proceed without asking. Use SQLite FTS5 for search. Optional packages such as `jieba`, `opencc`, or `pypinyin` may be used only when the user enables a feature that needs them.
+Use Python 3.10+ in the project-local Textoria virtual environment at `.textoria/venv/`. Required packages are `charset-normalizer`, `beautifulsoup4`, `jinja2`, `markdown-it-py`, and `pypinyin`. User project outputs go in `textoria/`; project-local internal runtime state goes in `.textoria/`. If Python, SQLite FTS5, the venv, or required packages are missing, ask for user approval before installing or modifying the project environment. If they already exist, proceed without asking. Use SQLite FTS5 for search. Optional packages such as `jieba` or `opencc` may be used only when the user enables a feature that needs them.
 
 The generated archive should be static and portable by default. Do not require React, Vue, server-side frameworks, or hosted services for the first-version static site.

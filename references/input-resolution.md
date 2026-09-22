@@ -8,7 +8,9 @@ First classify the user's task, then decide how source files should be handled. 
 
 Textoria v1 allows one project root to contain one or more Textoria collection archives. A collection archive is one independent 文獻集資料庫 with its own intermediates, SQLite, site, EPUB, logs, and manifest.
 
-Use `textoria/registry.json` to discover existing collections. A simple single-collection project may use `textoria/` directly. A multi-collection project should place each collection under `textoria/collections/<collection_slug>/`.
+Use `textoria/registry.json` to discover existing collections. Every collection archive must live under `textoria/collections/<collection_slug>/`; `textoria/` itself is reserved for project-level registry, shared theme, global settings, and collection indexes.
+
+Each collection has a user-facing `name` and a system-generated `slug`. The `name` is shown in the site and EPUB. The `slug` is used for `collection_id`, `archive_id`, the folder name, EPUB filename, and registry lookup.
 
 ## Project Archive Target
 
@@ -21,7 +23,8 @@ function resolve_project_archive_target(user_request, project_root, candidate_fi
     if collections.count == 0 {
         return {
             archive_action: "create_first_collection",
-            archive_root: "textoria/",
+            archive_root: "textoria/collections/<collection_slug>/",
+            needs_collection_name_confirmation: true,
             needs_file_resolution: true
         }
     }
@@ -30,7 +33,7 @@ function resolve_project_archive_target(user_request, project_root, candidate_fi
         return {
             status: "needs_new_collection_setup",
             reason: "new_collection_requested",
-            message: "請指定這個新文獻集的來源資料夾或來源檔案。建議先建立一個資料夾放原始檔；若尚未建立，我可以使用 textoria/collections/<collection_slug>/ 作為此文獻集的輸出資料夾。"
+            message: "請指定這個新文獻集的來源資料夾或來源檔案，並確認文獻集名稱。建議先建立一個資料夾放原始檔；若尚未建立，我可以使用 textoria/collections/<collection_slug>/ 作為此文獻集的輸出資料夾。"
         }
     }
 
@@ -63,7 +66,7 @@ function resolve_project_archive_target(user_request, project_root, candidate_fi
 
 Default behavior:
 
-- First Textoria run in a project: create the first collection archive. If the user does not request a named folder, use `textoria/`.
+- First Textoria run in a project: ask the user to confirm the collection `name`, defaulting to the source filename stem. Then generate the `slug` automatically and create the first collection archive under `textoria/collections/<collection_slug>/`.
 - Later Textoria runs with exactly one existing collection: continue and rebuild that collection unless the user clearly says they want a new collection.
 - Later Textoria runs with more than one existing collection: ask which collection to use unless the request identifies it.
 - A newly mentioned source file is assumed to belong to the selected collection unless it appears clearly unrelated.
@@ -71,9 +74,26 @@ Default behavior:
 - If the new file appears unrelated to the selected collection, ask before merging it into that collection.
 - If the user explicitly asks for a new collection, ask where the source files are or whether to create/use a folder for that collection.
 
+Name confirmation prompt for new collections:
+
+```text
+要建立新的 Textoria 文獻集。文獻集名稱使用「<source_filename_stem>」嗎？或請輸入文獻集名稱。
+```
+
+Slug generation:
+
+- generate from the confirmed collection `name`;
+- normalize Unicode with NFKC;
+- convert Chinese characters to lowercase Hanyu Pinyin without tone marks;
+- lowercase Latin letters;
+- convert spaces and underscores to hyphens;
+- remove punctuation except hyphens and word characters;
+- collapse repeated hyphens and trim leading/trailing hyphens;
+- if the slug already exists in `textoria/registry.json` for a different collection, follow WordPress-style suffixing: the original slug has no suffix, the first duplicate becomes `-2`, then `-3`, and so on.
+
 Use these signals for "possibly unrelated":
 
-- filename/title strongly differs from the existing collection title;
+- filename/title strongly differs from the existing collection name;
 - opening headings indicate a different work or corpus;
 - language/script differs substantially;
 - source format or heading pattern is unlike existing source files;
@@ -289,13 +309,13 @@ Order signals:
 After the user confirms the order, merge into:
 
 ```text
-textoria/intermediate/merged_text.md
+textoria/collections/<collection_slug>/intermediate/merged_text.md
 ```
 
 Also write:
 
 ```text
-textoria/intermediate/merge_manifest.json
+textoria/collections/<collection_slug>/intermediate/merge_manifest.json
 ```
 
 The merged file should be human-reviewable Markdown. Insert lightweight source boundary comments or headings only when they help review and do not distort the source text.
@@ -429,8 +449,11 @@ Low-confidence response:
 
 Final-output response after high/medium-confidence auto-structure must include:
 
-- requested final output path, such as `textoria/site/index.html` or `textoria/epub/<collection_slug>.epub`;
-- cleaned text path, usually `textoria/clean/cleaned_text.md`;
-- structure review files: `textoria/intermediate/structure_preview.md`, `textoria/intermediate/division_review.md`, `textoria/json/divisions.json`, `textoria/csv/divisions.csv`;
+- a clickable local website URL when `site/` was generated, such as `http://localhost:<port>/`;
+- requested final output path, such as `textoria/collections/<collection_slug>/site/index.html` or `textoria/collections/<collection_slug>/epub/<collection_slug>.epub`;
+- cleaned text path, usually `textoria/collections/<collection_slug>/clean/cleaned_text.md`;
+- structure review files: `textoria/collections/<collection_slug>/intermediate/structure_preview.md`, `textoria/collections/<collection_slug>/intermediate/division_review.md`, `textoria/collections/<collection_slug>/json/divisions.json`, `textoria/collections/<collection_slug>/csv/divisions.csv`;
+- all major generated artifacts, grouped by type: registry, manifest, config, raw/prepared/clean text, intermediate review files, CSV, JSON, SQLite, search index, EPUB, static site pages, and logs. Use clickable file links in the final response so the user can open files in the side panel.
 - a short list of inferred divisions, or the first several divisions if the list is long;
 - a clear note that divisions were inferred automatically and can be edited/rebuilt.
+- an operation note in this form: `我已經建立一個網站，網址為 [http://localhost:<port>/](http://localhost:<port>/)。你可以用瀏覽器打開此網站；若電腦重新開機或網站停用時，可以下指令要求 Codex 重新啟用網站。`
