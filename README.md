@@ -1,18 +1,31 @@
 # Textoria Digital Library Skill
 
-Textoria Digital Library is a Codex skill for building local, rebuildable digital text archives from plain-text sources. It converts supported Chinese historical-text inputs into cleaned text, structured CSV/JSON intermediates, SQLite + FTS full-text search, static reader/search pages, and optional EPUB output.
+Textoria Digital Library is a Codex skill for building local, rebuildable digital text archives from supported text sources. It converts `.txt`, `.md`, `.html/.htm`, and `.csv` inputs into normalized UTF-8 text, auditable CSV/JSON intermediates, a SQLite database with FTS5 full-text search, a static reading/search website, and optional EPUB output.
 
-## What It Does
+Textoria is designed for general corpora: article collections, historical documents, institutional records, teaching materials, personal research notes, public-domain texts, or any other supported plain-text source.
 
-- Checks and converts source files to UTF-8.
-- Extracts text from `.txt`, `.md`, `.html/.htm`, and `.csv`.
-- Cleans and normalizes text with conservative, auditable rules.
-- Structures text into collections, documents, divisions, paragraphs, sentences, and tokens.
-- Exports CSV and JSON intermediate files.
-- Builds a SQLite database with FTS5.
-- Generates a static website with `index.html`, `read.html`, and `search.html`.
-- Generates EPUB files when requested.
-- Keeps deterministic scripts and editable theme templates inside the skill.
+## What It Builds
+
+- Canonical UTF-8 working copies while preserving original source files.
+- Cleaned text with a cleaning report.
+- Structured archive data: collections, documents, divisions, paragraphs, sentences, and tokens.
+- CSV and JSON intermediate files for inspection and reuse.
+- `sqlite/library.sqlite` with full-text search support.
+- Static HTML pages for catalog, reading, browsing, and search.
+- Optional EPUB files for offline reading.
+- Validation logs and stage outputs under each collection archive.
+
+## Supported Inputs
+
+Textoria v1 accepts:
+
+- `.txt`
+- `.md`
+- `.html`
+- `.htm`
+- `.csv`
+
+PDF, DOCX, EPUB, XLSX, JSON, XML, images, audio, video, and archive files are not source formats in this version.
 
 ## Repository Layout
 
@@ -25,34 +38,36 @@ scripts/
 themes/
 ```
 
-Do not wrap these files in another `textoria-digital-library/` folder when publishing the repo.
+Do not wrap these files in another `textoria-digital-library/` folder when publishing or installing the skill.
 
-## Project-Local Install
+## Install
 
-Recommended. Run this in the target project root:
+### Project-Local Install
+
+Recommended for most projects. Run this in the target project root:
 
 ```bash
 mkdir -p .agents/skills/textoria-digital-library && curl -L https://github.com/cclintw/textoria-digital-library/archive/refs/heads/main.tar.gz | tar -xz --strip-components=1 -C .agents/skills/textoria-digital-library
 ```
 
-This installs the skill only for the current project:
+This installs Textoria only for the current project:
 
 ```text
 your-project/
-└─ .agents/
-   └─ skills/
-      └─ textoria-digital-library/
+`-- .agents/
+    `-- skills/
+        `-- textoria-digital-library/
 ```
 
-## Global Install
+### Global Install
 
-Codex's built-in skill installer installs into the user-level Codex skills directory:
+Use Codex's skill installer if you want Textoria available in every project:
 
 ```text
 install skill from https://github.com/cclintw/textoria-digital-library
 ```
 
-Use global install only if you want Textoria available in every project. Project-local install is safer for testing and for project-specific workflows.
+Project-local installation is safer when testing, customizing, or working with project-specific archive rules.
 
 ## Runtime
 
@@ -62,66 +77,397 @@ Textoria uses a project-local Python environment:
 .textoria/venv/
 ```
 
-Required Python packages:
+Requirements:
 
+- Python 3.10 or newer
+- SQLite with FTS5 enabled
 - `charset-normalizer`
 - `beautifulsoup4`
 - `jinja2`
 - `markdown-it-py`
 - `pypinyin`
 
-The skill asks before creating the virtual environment or installing dependencies.
+Check the runtime:
 
-## Output
+```bash
+.textoria/venv/bin/python scripts/textoria_runtime_check.py
+```
 
-Textoria writes project outputs under:
+If the environment or dependencies are missing, Textoria should ask before creating `.textoria/venv/` or installing packages.
+
+## Build a Collection
+
+The main build script accepts one supported source file:
+
+```bash
+.textoria/venv/bin/python scripts/textoria_build.py sources/sample.md --project-root . --collection-name "Sample Collection"
+```
+
+Add EPUB output:
+
+```bash
+.textoria/venv/bin/python scripts/textoria_build.py sources/sample.md --project-root . --collection-name "Sample Collection" --epub
+```
+
+For CSV input, specify the text column when needed:
+
+```bash
+.textoria/venv/bin/python scripts/textoria_build.py sources/articles.csv --project-root . --collection-name "Article Collection" --text-column body
+```
+
+If Textoria detects a plausible heading structure but needs confirmation, rebuild with:
+
+```bash
+.textoria/venv/bin/python scripts/textoria_build.py sources/sample.md --project-root . --collection-name "Sample Collection" --confirm-inferred-structure
+```
+
+## Output Layout
+
+Textoria writes collection archives under:
 
 ```text
 textoria/collections/<collection_slug>/
 ```
 
-Every collection archive uses that path, including the first and only collection in a project. The `textoria/` root is reserved for project-level files such as `registry.json`, shared theme files, global settings, and collection indexes.
+The project-level registry lives at:
+
+```text
+textoria/registry.json
+```
+
+Each collection archive may contain:
 
 ```text
 textoria/collections/<collection_slug>/
+|-- manifest.json
+|-- config/textoria.yml
+|-- raw/
+|-- prepared/
+|-- clean/
+|-- intermediate/
+|-- csv/
+|-- json/
+|-- sqlite/library.sqlite
+|-- search/
+|-- epub/
+|-- site/
+`-- logs/
 ```
 
-When creating a new collection, Textoria asks the user to confirm the human-readable collection `name`, defaulting to the source filename stem. Textoria then generates a WordPress-post-name-style `slug` from that name. Chinese names are converted to lowercase Hanyu Pinyin without tone marks. Duplicate slugs follow WordPress suffixing: original, then `-2`, `-3`, and so on. The generated site and EPUB display the `name`; registry ids, archive paths, and EPUB filenames use the `slug`.
-
-Each collection contains its own cleaned text, intermediates, CSV/JSON, SQLite database, static site, EPUB, and logs.
-
-## Example Prompts
+Important generated files include:
 
 ```text
-請把 sources/test.txt 做成全文檢索網站。
+clean/cleaned_text.md
+intermediate/structure_preview.md
+intermediate/division_review.md
+csv/divisions.csv
+json/divisions.json
+sqlite/library.sqlite
+site/index.html
+site/read.html
+site/search.html
+```
+
+## Validate Output
+
+Validate a collection archive:
+
+```bash
+.textoria/venv/bin/python scripts/textoria_validate.py textoria/collections/sample-collection
+```
+
+Require EPUB validation too:
+
+```bash
+.textoria/venv/bin/python scripts/textoria_validate.py textoria/collections/sample-collection --epub
+```
+
+## Example Prompts for Codex
+
+```text
+請把 sources/sample.md 做成全文檢索網站。
 ```
 
 ```text
-請把 sources/book.html 清理、結構化，建立 SQLite + FTS，並輸出 EPUB。
+請把 sources/articles.csv 清理、結構化，建立 SQLite + FTS，並輸出 EPUB。文字欄位是 body。
 ```
 
 ```text
-我要新建一個文獻集，用 sources/red-chamber/ 裡的檔案建立全文檢索資料庫。
+我要建立一個新的文獻集，用 sources/corpus/ 裡的檔案建立全文檢索資料庫。
 ```
 
 ```text
-刪除紅樓夢文獻集的 Textoria 產物，保留原始檔，讓我重頭做一次。
+請重新產生 article-collection 文獻集的靜態網站，不要重新清理原文。
+```
+
+```text
+刪除 sample-collection 文獻集的 Textoria 產物，保留原始檔，讓我重頭建立。
 ```
 
 ## Theme
 
-The default editable theme is:
+The bundled editable theme lives at:
 
 ```text
 themes/default/
 ```
 
-It contains templates and unminified CSS/JS:
+It contains:
 
 ```text
+themes/default/theme.json
 themes/default/templates/
 themes/default/static/css/style.css
 themes/default/static/js/
 ```
 
-Generated websites copy theme assets into each collection's `site/assets/`.
+Generated websites copy theme assets into each collection's `site/assets/` directory.
+
+Projects may override the bundled theme with:
+
+```text
+textoria/theme/
+|-- theme.json
+|-- templates/
+`-- static/
+```
+
+When only theme files change, rebuild the static site. Encoding, cleaning, structuring, and SQLite do not need to be rerun unless their inputs changed.
+
+---
+
+# Textoria Digital Library Skill 中文版
+
+Textoria Digital Library 是一個 Codex skill，用來把支援格式的文字來源建立成本機、可重建、可檢查的數位文獻庫。它會將 `.txt`、`.md`、`.html/.htm`、`.csv` 轉成標準 UTF-8 文字、可稽核的 CSV/JSON 中介檔、具備 FTS5 全文檢索的 SQLite 資料庫、靜態閱讀/檢索網站，也可以選擇輸出 EPUB。
+
+Textoria 適用於通用文本資料：文章集、歷史文書、機構紀錄、教學材料、個人研究筆記、公版文本，或任何支援格式的純文字來源。
+
+## 可以產生什麼
+
+- 保留原始檔，並建立標準 UTF-8 工作副本。
+- 清理後文字與清理報告。
+- 結構化資料：文獻集、文件、division、段落、句子、tokens。
+- 可檢查、可重用的 CSV 與 JSON 中介檔。
+- `sqlite/library.sqlite` 全文檢索資料庫。
+- 靜態 HTML 首頁、閱讀頁、瀏覽頁與檢索頁。
+- 可選的 EPUB 離線閱讀檔。
+- 每個文獻集自己的驗證紀錄與階段輸出。
+
+## 支援輸入格式
+
+Textoria v1 支援：
+
+- `.txt`
+- `.md`
+- `.html`
+- `.htm`
+- `.csv`
+
+這個版本不把 PDF、DOCX、EPUB、XLSX、JSON、XML、圖片、音訊、影片或壓縮檔當作來源格式。
+
+## 專案結構
+
+這個 repository 本身就是 skill root：
+
+```text
+SKILL.md
+references/
+scripts/
+themes/
+```
+
+發布或安裝時，不要再外包一層 `textoria-digital-library/` 資料夾。
+
+## 安裝方式
+
+### 專案內安裝
+
+建議多數專案使用。請在目標專案根目錄執行：
+
+```bash
+mkdir -p .agents/skills/textoria-digital-library && curl -L https://github.com/cclintw/textoria-digital-library/archive/refs/heads/main.tar.gz | tar -xz --strip-components=1 -C .agents/skills/textoria-digital-library
+```
+
+安裝後只會作用於目前專案：
+
+```text
+your-project/
+`-- .agents/
+    `-- skills/
+        `-- textoria-digital-library/
+```
+
+### 全域安裝
+
+如果希望所有專案都可以使用 Textoria，可以使用 Codex skill installer：
+
+```text
+install skill from https://github.com/cclintw/textoria-digital-library
+```
+
+如果你正在測試、客製化，或某個專案需要自己的文獻庫規則，建議使用專案內安裝。
+
+## 執行環境
+
+Textoria 使用專案本地的 Python 環境：
+
+```text
+.textoria/venv/
+```
+
+需求如下：
+
+- Python 3.10 或更新版本
+- 啟用 FTS5 的 SQLite
+- `charset-normalizer`
+- `beautifulsoup4`
+- `jinja2`
+- `markdown-it-py`
+- `pypinyin`
+
+檢查執行環境：
+
+```bash
+.textoria/venv/bin/python scripts/textoria_runtime_check.py
+```
+
+如果環境或套件尚未準備好，Textoria 應該先詢問，再建立 `.textoria/venv/` 或安裝套件。
+
+## 建立文獻集
+
+主要建置腳本接受一個支援格式的來源檔：
+
+```bash
+.textoria/venv/bin/python scripts/textoria_build.py sources/sample.md --project-root . --collection-name "Sample Collection"
+```
+
+同時輸出 EPUB：
+
+```bash
+.textoria/venv/bin/python scripts/textoria_build.py sources/sample.md --project-root . --collection-name "Sample Collection" --epub
+```
+
+如果來源是 CSV，可在需要時指定文字欄位：
+
+```bash
+.textoria/venv/bin/python scripts/textoria_build.py sources/articles.csv --project-root . --collection-name "Article Collection" --text-column body
+```
+
+如果 Textoria 找到可能的標題結構，但需要使用者確認，可以用下列選項重建：
+
+```bash
+.textoria/venv/bin/python scripts/textoria_build.py sources/sample.md --project-root . --collection-name "Sample Collection" --confirm-inferred-structure
+```
+
+## 輸出位置
+
+Textoria 會把每個文獻集輸出到：
+
+```text
+textoria/collections/<collection_slug>/
+```
+
+專案層級的 registry 位於：
+
+```text
+textoria/registry.json
+```
+
+每個文獻集可能包含：
+
+```text
+textoria/collections/<collection_slug>/
+|-- manifest.json
+|-- config/textoria.yml
+|-- raw/
+|-- prepared/
+|-- clean/
+|-- intermediate/
+|-- csv/
+|-- json/
+|-- sqlite/library.sqlite
+|-- search/
+|-- epub/
+|-- site/
+`-- logs/
+```
+
+常用輸出檔包括：
+
+```text
+clean/cleaned_text.md
+intermediate/structure_preview.md
+intermediate/division_review.md
+csv/divisions.csv
+json/divisions.json
+sqlite/library.sqlite
+site/index.html
+site/read.html
+site/search.html
+```
+
+## 驗證輸出
+
+驗證一個文獻集：
+
+```bash
+.textoria/venv/bin/python scripts/textoria_validate.py textoria/collections/sample-collection
+```
+
+也要求驗證 EPUB：
+
+```bash
+.textoria/venv/bin/python scripts/textoria_validate.py textoria/collections/sample-collection --epub
+```
+
+## Codex 使用範例
+
+```text
+請把 sources/sample.md 做成全文檢索網站。
+```
+
+```text
+請把 sources/articles.csv 清理、結構化，建立 SQLite + FTS，並輸出 EPUB。文字欄位是 body。
+```
+
+```text
+我要建立一個新的文獻集，用 sources/corpus/ 裡的檔案建立全文檢索資料庫。
+```
+
+```text
+請重新產生 article-collection 文獻集的靜態網站，不要重新清理原文。
+```
+
+```text
+刪除 sample-collection 文獻集的 Textoria 產物，保留原始檔，讓我重頭建立。
+```
+
+## 主題系統
+
+內建可編輯主題位於：
+
+```text
+themes/default/
+```
+
+內容包含：
+
+```text
+themes/default/theme.json
+themes/default/templates/
+themes/default/static/css/style.css
+themes/default/static/js/
+```
+
+產生網站時，主題資源會複製到每個文獻集的 `site/assets/`。
+
+專案可以用下列目錄覆蓋內建主題：
+
+```text
+textoria/theme/
+|-- theme.json
+|-- templates/
+`-- static/
+```
+
+如果只修改主題檔，重新產生靜態網站即可。除非來源或中介資料有變，否則不需要重新執行編碼轉換、清理、結構化或 SQLite 建置。
