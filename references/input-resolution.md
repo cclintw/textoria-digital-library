@@ -428,12 +428,16 @@ function handle_structure_preview(preview, requested_task, config) {
 }
 ```
 
-Low-confidence response:
+Low-confidence response when Textoria cannot see a plausible repeated candidate pattern:
 
 ```text
 我已經完成編碼轉換與文本清理，但無法可靠判斷章節或段落結構，因此先暫停，不直接產生資料庫/網站/EPUB，避免輸出錯誤的目錄。
 
-請打開清理後或合併後的檔案，用 Markdown 標題標示層級，最多四層，並用空行標示段落：
+你可以選擇其中一種方式繼續：
+
+1. 告訴我章節規則，例如「每一章都以 第X回 開頭」或「每個標題都是單獨一行」。
+2. 讓我根據文本內容再嘗試判斷章節。
+3. 打開清理後或合併後的檔案，用 Markdown 標題標示層級，最多四層，並用空行標示段落：
 
 # 全書標題
 ## 第一層 division

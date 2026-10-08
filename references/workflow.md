@@ -185,10 +185,16 @@ After the user confirms the proposed structure rule, rerun the build with that r
 
 When a confirmed candidate heading combines a Chinese volume/chapter marker and title on one line, normalize the division title with one ideographic space after the marker. For example, `第十五回王鳳姐弄權鐵檻寺秦鯨卿得趣饅頭庵` becomes `第十五回　王鳳姐弄權鐵檻寺秦鯨卿得趣饅頭庵`.
 
-If Textoria cannot see a plausible candidate pattern, ask the user for a rule or manual markings:
+If Textoria cannot see a plausible candidate pattern, tell the user the pipeline has paused before downstream outputs, then offer three recovery paths: provide a rule, ask Textoria to try another inference pass, or manually add Markdown headings and paragraph breaks.
 
 ```text
-我目前無法可靠判斷這份文本的章節結構。你可以提供章節切分規則嗎？或讓我先自行判斷並提出建議。
+我已經完成編碼轉換與文本清理，但無法可靠判斷章節或段落結構，因此先暫停，不直接產生資料庫/網站/EPUB，避免輸出錯誤的目錄。
+
+你可以選擇其中一種方式繼續：
+
+1. 告訴我章節規則，例如「每一章都以 第X回 開頭」或「每個標題都是單獨一行」。
+2. 讓我根據文本內容再嘗試判斷章節。
+3. 打開清理後或合併後的檔案，用 Markdown 標題標示層級，最多四層，並用空行標示段落：
 ```
 
 Manual markings use Markdown headings and paragraph breaks:
